@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .chat {
+            height: 400px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            background-color: #fff;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+
+        .user-message {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+
+        .bot-message {
+            text-align: left;
+            margin-bottom: 10px;
+        }
+
+        #pdf-upload-form {
+            display: none;
+        }
+       .input-group {
+            display: flex;
+            align-items: center;
+        }
+
+        #question {
+            flex-grow: 1;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        }
+
+        button[type="submit"] {
+            margin-left: 10px;
+        }
+
+        .paper-plane-icon {
+        font-size: 1.2rem;
+        vertical-align: middle;
+        }
+
+        .upload-btn {
+            width: 180px;
+            height: 40px;
+            margin : 0 px;
+            background-color: #0f0f0f;
+        }
+        @media (max-width: 767px) {
+            #pdf_files {
+                margin-bottom: 20px;
+                margin-left: 10 px;
+        }
+        }
+        #pdf_files{
+          margin-top:10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Chat with PDFs</h2>
+<!-- Update the form id="pdf-upload-form" structure -->
+        <!-- Update the #pdf-upload-form -->
+        <form id="pdf-upload-form" class="d-flex flex-wrap">
+            <div class="form-group mb-0 mr-2 flex-grow-1">
+                <input type="file" name="pdf_files[]" id="pdf_files" multiple required>
+            </div>
+            <button type="submit" class="btn btn-primary upload-btn">Upload PDFs</button>
+        </form>
+        <br>
+        <div class="chat" id="messages">
+            <div class="message bot-message">Welcome to the PDF Chatbot! Please upload your PDF files to begin.</div>
+        </div>
+        <form id="question-form" class="mt-3">
+            <div class="input-group">
+                <input type="text" name="question" id="question" class="form-control" placeholder="Ask a question..." required>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-paper-plane-top"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var uploaded = false;
+            var step = 1;
+
+            function addBotMessage(message) {
+                var botMessage = $("<div>").addClass("message bot-message").text(message);
+                $("#messages").append(botMessage);
+            }
+
+            $("#pdf-upload-form").submit(function(e) {
+                e.preventDefault();
+                if (uploaded) {
+                    alert("PDF files are already uploaded.");
+                    return;
+                }
+
+                var form_data = new FormData(this);
+                $.ajax({
+                    url: '/upload_pdf',
+                    type: 'POST',
+                    data: form_data,
+                    contentType: false,
+                    cache: false,
+                    processData: false,
+                    success: function(response) {
+                        if (response.success) {
+                            uploaded = true;
+                            addBotMessage("PDF files uploaded successfully. You can now ask questions about the annual reports.");
+                            step = 2                        
+                        } 
+                        else {
+                            alert("Error uploading PDF files.");
+                        }
+                    },
+                    error: function() {
+                        alert("Error uploading PDF files.");
+                    }
+                });
+            });
+
+            $("#question-form").submit(function(e) {
+                e.preventDefault();
+                if (!uploaded) {
+                    alert("Please upload PDF files first.");
+                    return;
+                }
+
+                var question = $("#question").val();
+                if (question.trim() === '') {
+                    alert("Please enter a question.");
+                    return;
+                }
+
+                var userMessage = $("<div>").addClass("message user-message").text(question);
+                $("#messages").append(userMessage);
+                $("#question").val('');
+
+                $.ajax({
+                    url: '/ask_question',
+                    type: 'POST',
+                    data: {
+                        question: question
+                    },
+                    success: function(response) {
+                        addBotMessage(response.answer);
+                    },
+                    error: function() {
+                        alert("Error getting an answer.");
+                    }
+                });
+            });
+
+            if (step === 1) {
+                $("#pdf-upload-form").show();
+            }
+        });
+    </script>
+</body>
+</html>
+
